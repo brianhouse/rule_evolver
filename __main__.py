@@ -27,6 +27,9 @@ def distance(d1, d2):
 class Pair:
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.state = None
         self.changed = False
 
@@ -34,13 +37,17 @@ class Pair:
 class Model:
 
     def __init__(self, rules=None):
+        self.verbose = False        
+        self.pairs = [Pair() for p in range(PAIRS)]                
         if rules:
             self.rules = copy.copy(rules)
         else:
             self.rules = {state: dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0]))) for state in STATES}
 
     def mutate(self):
+        # swap whole rule set
         self.rules[random.choice(STATES)] = dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0])))
+        # self.rules[random.choice(STATES)][random.choice(STATES)]
 
     def breed(self, model):
         return Model({key: (self.rules[key] if random.random() > .5 else model.rules[key]) for key in STATES})
@@ -52,8 +59,9 @@ class Model:
         return tuple(stats.values())
 
     def reset(self):
+        for pair in self.pairs:
+            pair.reset()
         self.score = None
-        self.pairs = [Pair() for p in range(PAIRS)]
         n = int(len(self.pairs) / len(STATES))
         chunks = [self.pairs[i:i + n] for i in range(0, len(self.pairs), n)]
         if len(chunks) > len(STATES):
@@ -68,17 +76,19 @@ class Model:
         T = 0
         previous = (0, 0, 0, 0)
         previous_dis = float('Inf')
-        log.info("--------------------------------------------------")        
-        log.info("\n" + pformat(self.rules))
+        if self.verbose:
+            log.info("--------------------------------------------------")        
+            log.info("\n" + pformat(self.rules))
         while True:
             current = self.stats()
             dis = distance(current, previous)
             if dis >= previous_dis:
-                log.info(dis)
-                log.info("T%s" % (T-1))
-                log.info(previous)
                 self.score = distance(previous, MAGIC)
-                log.info(self.score)
+                if self.verbose:                
+                    log.info(dis)
+                    log.info("T%s" % (T-1))
+                    log.info(previous)
+                    log.info(self.score)
                 break
             previous = current
             previous_dis = dis
@@ -103,12 +113,45 @@ class Model:
 
 
 
-model = Model()
-model.run()
+POPULATION = 100
+SURVIVAL = .5
+MUTATION = .1
+MATE = .2
 
-# model = Model(RULES)
-# model.run()
+models = [Model() for i in range(POPULATION)]
 
-# model.mutate()
-# model.run()
+best = None
 
+generation = 0
+
+try:
+    while True:   
+        log.info("GENERATION %d" % generation) 
+        for model in models:
+            model.run()
+        models.sort(key=lambda m: m.score)
+        log.info("--> %s" % models[0].score)
+
+        if best == None or models[0].score < best.score:
+            best = copy.copy(models[0])
+
+        s = math.floor(POPULATION * SURVIVAL)    
+        models = models[:s]
+
+        random.shuffle(models)
+        for m in range(int(MUTATION * len(models))):
+            models[m].mutate()
+
+        random.shuffle(models)        
+        for m in range(int(MATE * len(models))):
+            models[m] = models[m].breed(models[m + 1])
+
+        models = models + [Model() for i in range(POPULATION - s)]
+        models[0] = best
+
+except KeyboardInterrupt:
+    pass
+
+best.verbose = True
+best.run()
+        
