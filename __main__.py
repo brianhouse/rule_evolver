@@ -2,6 +2,7 @@
 
 import random, json, math, copy
 import numpy as np
+from pprint import pformat
 from util import config, log
 
 log.info("START")
@@ -14,7 +15,13 @@ RULES = {   '++': {'++': .5, '+-': .2, '-+': .1, '--': .2},    # Merton pages 40
             '-+': {'++': .5, '+-': .0, '-+': .4, '--': .1},
             '--': {'++': .2, '+-': .1, '-+': .0, '--': .7}
             }
-STATES = list(RULES.keys())
+STATES = tuple(RULES.keys())
+
+MAGIC = 133, 57, 24, 186
+
+
+def distance(d1, d2):
+    return np.linalg.norm(np.array(d1) - np.array(d2))
 
 
 class Pair:
@@ -26,12 +33,17 @@ class Pair:
 
 class Model:
 
-    def __init__(self, rules):
-        self.rules = copy.copy(rules)
+    def __init__(self, rules=None):
+        if rules:
+            self.rules = copy.copy(rules)
+        else:
+            self.rules = {state: dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0]))) for state in STATES}
 
     def mutate(self):
-        key = random.choice(tuple(self.rules.keys()))
-        self.rules[key] = dict(zip(['++', '+-', '-+', '--'], list(np.random.dirichlet(np.ones(4),size=1)[0])))
+        self.rules[random.choice(STATES)] = dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0])))
+
+    def breed(self, model):
+        return Model({key: (self.rules[key] if random.random() > .5 else model.rules[key]) for key in STATES})
 
     def stats(self):
         stats = {'++': 0, '+-': 0, '-+': 0, '--': 0}
@@ -40,6 +52,7 @@ class Model:
         return tuple(stats.values())
 
     def reset(self):
+        self.score = None
         self.pairs = [Pair() for p in range(PAIRS)]
         n = int(len(self.pairs) / len(STATES))
         chunks = [self.pairs[i:i + n] for i in range(0, len(self.pairs), n)]
@@ -48,25 +61,27 @@ class Model:
             del chunks[-1]
         for c, chunk in enumerate(chunks):
             for pair in chunk:
-                pair.state = STATES[c]
+                pair.state = STATES[c]        
 
     def run(self):
         self.reset()
         T = 0
         previous = (0, 0, 0, 0)
-        previous_difference = float('Inf')
+        previous_dis = float('Inf')
         log.info("--------------------------------------------------")        
-        log.info(self.stats())
+        log.info("\n" + pformat(self.rules))
         while True:
             current = self.stats()
-            difference = sum([abs(current[i] - previous[i]) for i in range(len(current))])
-            if difference >= previous_difference:
-                log.info(difference)
+            dis = distance(current, previous)
+            if dis >= previous_dis:
+                log.info(dis)
                 log.info("T%s" % (T-1))
                 log.info(previous)
+                self.score = distance(previous, MAGIC)
+                log.info(self.score)
                 break
             previous = current
-            previous_difference = difference
+            previous_dis = dis
             T += 1
             self.update()            
 
@@ -88,9 +103,12 @@ class Model:
 
 
 
-model = Model(RULES)
+model = Model()
 model.run()
 
-model.mutate()
-model.run()
+# model = Model(RULES)
+# model.run()
+
+# model.mutate()
+# model.run()
 
