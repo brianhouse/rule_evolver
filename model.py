@@ -1,12 +1,7 @@
-#!/usr/bin/env python3
-
-import random, json, math, copy
+import random, json, math, copy, time
 import numpy as np
 from pprint import pformat
-from util import config, log
-
-log.info("START")
-
+from util import config, log, save
 
 PAIRS = 400
 
@@ -18,17 +13,6 @@ RULES = {   '++': {'++': .5, '+-': .2, '-+': .1, '--': .2},    # Merton pages 40
 STATES = tuple(RULES.keys())
 
 MAGIC = 133, 57, 24, 186
-
-
-def distance(d1, d2):
-    return np.linalg.norm(np.array(d1) - np.array(d2))
-
-
-def compress(signal, value=2.0, normalize=False):
-    """Compress the signal by an exponential value (will expand if value<0)"""
-    signal = np.array(signal)
-    signal = np.power(signal, 1.0 / value)
-    return normalize(signal) if normalize else signal    
 
 
 class Pair:
@@ -80,6 +64,9 @@ class Model:
             stats[pair.state] += 1
         return tuple(stats.values())
 
+    def distance(self, d1, d2):
+        return np.linalg.norm(np.array(d1) - np.array(d2))        
+
     def reset(self):
         for pair in self.pairs:
             pair.reset()
@@ -103,14 +90,14 @@ class Model:
             log.info("\n" + pformat(self.rules))
         while True:
             current = self.stats()
-            dis = distance(current, previous)
+            dis = self.distance(current, previous)
             if dis >= previous_dis:
                 break
             previous = current
             previous_dis = dis
             T += 1
             self.update()            
-        self.score = distance(previous, MAGIC)
+        self.score = self.distance(previous, MAGIC)
         if self.verbose:                
             log.info(dis)
             log.info("T%s" % (T-1))
@@ -134,62 +121,3 @@ class Model:
                     self.pairs[p].changed = True
 
 
-
-POPULATION = 1000
-SURVIVAL = .5
-TOURNAMENT = .1
-MUTATION = .2
-MATE = .2
-
-models = [Model() for i in range(POPULATION)]
-
-best = None
-best_score = 500
-generation = 0
-
-while True:   
-    # print(models)
-    # input()
-    try:        
-        log.info("GENERATION %d" % generation) 
-        generation += 1
-        for model in models:
-            model.run()
-        models.sort(key=lambda m: m.score)
-        log.info("--> %s" % models[0])
-
-        if best == None or models[0].score < best.score:
-            best = models[0]            
-            log.info("==> new best: %s" % best)
-
-        s = math.floor(POPULATION * SURVIVAL)   
-        parents = [best]
-        while len(parents) < s - 1:
-            tournament = [random.choice(models) for i in range(round(TOURNAMENT * POPULATION))]
-            tournament.sort(key=lambda m: m.score)
-            parents.append(tournament[0])            
-            models.remove(tournament[0])
-        # log.info("selected parents")
-
-        kids = []
-        while len(kids) < POPULATION - len(parents):
-            kids.append(random.choice(parents).breed(random.choice(parents)))
-        # log.info("made kids")   
-
-        models = parents + kids
-        random.shuffle(models)
-        for m in range(round(MUTATION * POPULATION)):
-            if models[m] == best:
-                continue
-            models[m].mutate()
-        # log.info("mutated")            
-
-        # models.sort(key=lambda m: m.id)
-        # print(models)
-
-    except KeyboardInterrupt:
-        best.verbose = True
-        best.run()
-        best.verbose = False
-        input()
-        
