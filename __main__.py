@@ -135,7 +135,7 @@ class Model:
 
 
 
-POPULATION = 100
+POPULATION = 1000
 SURVIVAL = .5
 TOURNAMENT = .1
 MUTATION = .2
@@ -167,20 +167,22 @@ while True:
         while len(parents) < s - 1:
             tournament = [random.choice(models) for i in range(round(TOURNAMENT * POPULATION))]
             tournament.sort(key=lambda m: m.score)
-            if tournament[0] not in parents:
-                parents.append(tournament[0])
+            parents.append(tournament[0])            
+            models.remove(tournament[0])
+        # log.info("selected parents")
 
-        random.shuffle(models)        
         kids = []
         while len(kids) < POPULATION - len(parents):
-            kids.append(random.choice(models).breed(random.choice(models)))
-        models = parents + kids
+            kids.append(random.choice(parents).breed(random.choice(parents)))
+        # log.info("made kids")   
 
+        models = parents + kids
         random.shuffle(models)
         for m in range(round(MUTATION * POPULATION)):
             if models[m] == best:
                 continue
             models[m].mutate()
+        # log.info("mutated")            
 
         # models.sort(key=lambda m: m.id)
         # print(models)
