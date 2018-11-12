@@ -24,6 +24,13 @@ def distance(d1, d2):
     return np.linalg.norm(np.array(d1) - np.array(d2))
 
 
+def compress(signal, value=2.0, normalize=False):
+    """Compress the signal by an exponential value (will expand if value<0)"""
+    signal = np.array(signal)
+    signal = np.power(signal, 1.0 / value)
+    return normalize(signal) if normalize else signal    
+
+
 class Pair:
 
     def __init__(self):
@@ -36,25 +43,36 @@ class Pair:
 
 class Model:
 
+    n = 0
+
+    def __repr__(self):
+        return "%3.2f (%d)" % (self.score, self.id)
+
     def __init__(self, rules=None):
+        self.id = Model.n
+        Model.n += 1
         self.verbose = False        
-        self.pairs = [Pair() for p in range(PAIRS)]                
+        self.pairs = [Pair() for p in range(PAIRS)]
+        self.score = 500
         if rules:
             self.rules = copy.copy(rules)
         else:
             self.rules = {state: dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0]))) for state in STATES}
 
     def mutate(self):
-        # swap whole rule set
-        self.rules[random.choice(STATES)] = dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0])))
+        # redo whole rule set
+        # self.rules[random.choice(STATES)] = dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0])))
 
-        # swap individual
-        # s1 = random.choice(STATES)
-        # s2 = random.choice([state for state in states if state != s1])
-        # self.rules[random.choice(STATES)][s1] = 
+        # swap individual rules
+        rule = random.choice(STATES)
+        s1 = random.choice(STATES)
+        s2 = random.choice([state for state in STATES if state != s1])
+        v = self.rules[rule][s1]
+        self.rules[rule][s1] = self.rules[rule][s2]
+        self.rules[rule][s2] = v
 
     def breed(self, model):
-        return Model({key: (self.rules[key] if random.random() > .5 else model.rules[key]) for key in STATES})
+        return Model({key: (copy.copy(self.rules[key]) if random.random() > .5 else copy.copy(model.rules[key])) for key in STATES})
 
     def stats(self):
         stats = {'++': 0, '+-': 0, '-+': 0, '--': 0}
@@ -119,50 +137,57 @@ class Model:
 
 POPULATION = 100
 SURVIVAL = .5
-MUTATION = .1
+TOURNAMENT = .1
+MUTATION = .2
 MATE = .2
 
 models = [Model() for i in range(POPULATION)]
 
 best = None
-
+best_score = 500
 generation = 0
 
 while True:   
+    # print(models)
+    # input()
     try:        
         log.info("GENERATION %d" % generation) 
         generation += 1
         for model in models:
             model.run()
         models.sort(key=lambda m: m.score)
-        log.info("--> %s" % models[0].score)
+        log.info("--> %s" % models[0])
 
         if best == None or models[0].score < best.score:
-            best = Model(models[0].rules)
+            best = models[0]            
+            log.info("==> new best: %s" % best)
 
-        s = math.floor(POPULATION * SURVIVAL)    
-        models = models[:s]
-
-        random.shuffle(models)
-        for m in range(int(MUTATION * len(models))):
-            models[m].mutate()
+        s = math.floor(POPULATION * SURVIVAL)   
+        parents = [best]
+        while len(parents) < s - 1:
+            tournament = [random.choice(models) for i in range(round(TOURNAMENT * POPULATION))]
+            tournament.sort(key=lambda m: m.score)
+            if tournament[0] not in parents:
+                parents.append(tournament[0])
 
         random.shuffle(models)        
-        for m in range(int(MATE * len(models))):
-            models[m] = models[m].breed(models[m + 1])
+        kids = []
+        while len(kids) < POPULATION - len(parents):
+            kids.append(random.choice(models).breed(random.choice(models)))
+        models = parents + kids
 
-        models = models + [Model() for i in range(POPULATION - s - 1)] + [best]
+        random.shuffle(models)
+        for m in range(round(MUTATION * POPULATION)):
+            if models[m] == best:
+                continue
+            models[m].mutate()
+
+        # models.sort(key=lambda m: m.id)
+        # print(models)
+
     except KeyboardInterrupt:
         best.verbose = True
         best.run()
         best.verbose = False
         input()
         
-
-"""
-
-Need a gradient in the mutation so that it can converge
-
-also need to understand why best changes
-
-"""
