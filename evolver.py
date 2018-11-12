@@ -13,6 +13,8 @@ TOURNAMENT = .1
 MUTATION = .2
 MATE = .2
 
+THRESHOLD = 2.0
+
 
 while True:
     log.info("//////////////////////////////////////////////////")    
@@ -32,7 +34,7 @@ while True:
             best = models[0]            
             log.info("==> new best: %s" % best)
 
-        if best.score < 2:
+        if best.score < THRESHOLD:
             break
 
         s = math.floor(POPULATION * SURVIVAL)   
