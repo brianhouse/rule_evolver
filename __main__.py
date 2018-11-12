@@ -47,7 +47,11 @@ class Model:
     def mutate(self):
         # swap whole rule set
         self.rules[random.choice(STATES)] = dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0])))
-        # self.rules[random.choice(STATES)][random.choice(STATES)]
+
+        # swap individual
+        # s1 = random.choice(STATES)
+        # s2 = random.choice([state for state in states if state != s1])
+        # self.rules[random.choice(STATES)][s1] = 
 
     def breed(self, model):
         return Model({key: (self.rules[key] if random.random() > .5 else model.rules[key]) for key in STATES})
@@ -83,17 +87,17 @@ class Model:
             current = self.stats()
             dis = distance(current, previous)
             if dis >= previous_dis:
-                self.score = distance(previous, MAGIC)
-                if self.verbose:                
-                    log.info(dis)
-                    log.info("T%s" % (T-1))
-                    log.info(previous)
-                    log.info(self.score)
                 break
             previous = current
             previous_dis = dis
             T += 1
             self.update()            
+        self.score = distance(previous, MAGIC)
+        if self.verbose:                
+            log.info(dis)
+            log.info("T%s" % (T-1))
+            log.info(previous)
+            log.info(self.score)
 
     def update(self):
         for pair in self.pairs:
@@ -124,16 +128,17 @@ best = None
 
 generation = 0
 
-try:
-    while True:   
+while True:   
+    try:        
         log.info("GENERATION %d" % generation) 
+        generation += 1
         for model in models:
             model.run()
         models.sort(key=lambda m: m.score)
         log.info("--> %s" % models[0].score)
 
         if best == None or models[0].score < best.score:
-            best = copy.copy(models[0])
+            best = Model(models[0].rules)
 
         s = math.floor(POPULATION * SURVIVAL)    
         models = models[:s]
@@ -146,12 +151,18 @@ try:
         for m in range(int(MATE * len(models))):
             models[m] = models[m].breed(models[m + 1])
 
-        models = models + [Model() for i in range(POPULATION - s)]
-        models[0] = best
-
-except KeyboardInterrupt:
-    pass
-
-best.verbose = True
-best.run()
+        models = models + [Model() for i in range(POPULATION - s - 1)] + [best]
+    except KeyboardInterrupt:
+        best.verbose = True
+        best.run()
+        best.verbose = False
+        input()
         
+
+"""
+
+Need a gradient in the mutation so that it can converge
+
+also need to understand why best changes
+
+"""
