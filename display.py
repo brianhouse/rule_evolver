@@ -38,6 +38,8 @@ baseline = Model(RULES)
 baseline.run()
 output(baseline)
 
+save("models.pkl", (baseline, models))
+
 print()
 print()
 print("Alternative tables")
