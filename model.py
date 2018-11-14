@@ -12,7 +12,7 @@ RULES = {   '++': {'++': .5, '+-': .2, '-+': .1, '--': .2},    # Merton pages 40
             }
 STATES = tuple(RULES.keys())
 
-MAGIC = 133, 57, 24, 186
+MAGIC = [x / 400 for x in [133, 57, 24, 186]]
 
 
 class Pair:
@@ -30,7 +30,7 @@ class Model:
     n = 0
 
     def __repr__(self):
-        return "%3.2f (%d)" % (self.score, self.id)
+        return "%s (%d)" % (self.score, self.id)
 
     def __init__(self, rules=None):
         self.id = Model.n
@@ -58,11 +58,11 @@ class Model:
     def breed(self, model):
         return Model({key: (copy.copy(self.rules[key]) if random.random() > .5 else copy.copy(model.rules[key])) for key in STATES})
 
-    def stats(self):
+    def distribution(self):
         stats = {'++': 0, '+-': 0, '-+': 0, '--': 0}
         for pair in self.pairs:
             stats[pair.state] += 1
-        return tuple(stats.values())
+        return [x / PAIRS for x in tuple(stats.values())]
 
     def distance(self, d1, d2):
         return np.linalg.norm(np.array(d1) - np.array(d2))        
@@ -89,7 +89,7 @@ class Model:
             log.info("--------------------------------------------------")        
             log.info("\n" + pformat(self.rules))
         while True:
-            current = self.stats()
+            current = self.distribution()
             dis = self.distance(current, previous)
             if dis >= previous_dis:
                 break

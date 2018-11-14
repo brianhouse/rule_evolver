@@ -13,7 +13,7 @@ TOURNAMENT = .1
 MUTATION = .2
 MATE = .2
 
-THRESHOLD = 2.0
+THRESHOLD = .01
 
 
 while True:
@@ -27,12 +27,12 @@ while True:
         generation += 1
         for model in models:
             model.run()
-        models.sort(key=lambda m: m.score)
+        models.sort(key=lambda m: (m.score, m.id))
         log.info("--> %s" % models[0])
 
         if best == None or models[0].score < best.score:
             best = models[0]            
-            log.info("==> new best: %s" % best)
+            log.info("==> new best: %s" % best.id)
 
         if best.score < THRESHOLD:
             break
