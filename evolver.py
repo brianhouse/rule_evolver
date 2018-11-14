@@ -34,7 +34,7 @@ while True:
             best = models[0]            
             log.info("==> new best: %s" % best.id)
 
-        if best.score < THRESHOLD:
+        if generation >= 12 and best.score < THRESHOLD:
             break
 
         s = math.floor(POPULATION * SURVIVAL)   
