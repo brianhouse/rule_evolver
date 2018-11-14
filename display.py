@@ -2,7 +2,7 @@
 
 import os, time
 from util import load, save
-from model import Model, Pair, RULES
+from model import Model, Pair, RULES, STATES
 
 DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), "results"))
 
@@ -42,8 +42,27 @@ print()
 print()
 print("Alternative tables")
 print()
-for model in models:
+
+diffs = []
+for m, model in enumerate(models):
     model.run()
     output(model)
+
+    diff = 0
+#     for state_1 in STATES:
+#         for state_2 in STATES:
+#             diff += abs(model.rules[state_1][state_2] - baseline.rules[state_1][state_2])
+#     diffs.append(diff)
+
+
+
+# d = list(zip(diffs, models))
+# d.sort(key=lambda p: p[0], reverse=True)
+
+# d = d[:10]
+
+# for m in d:
+#     model = m[1]
+#     output(model)
 
 
