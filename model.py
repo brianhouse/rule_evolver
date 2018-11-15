@@ -103,33 +103,46 @@ class Model:
             pprint(self.rules)
             print()
         while True:
+
+            # update the model and get the number of pairs in each state
             self.update()            
             current_distribution = self.distribution()
+
+            # find the change in the number of pairs for each state
             delta = np.array(current_distribution) - np.array(previous_distribution)
             if self.verbose:
                 print("%d\t%d\t%d\t%d\t%s" % (*current_distribution, delta))
             deltas.append(delta)
+
+            # if the changes sum over n steps, we're oscillating and should stop
             stop = False
-            for i in range(1, len(deltas)):
-                s = sum(abs(sum(np.array(deltas)[-i:,])))
+            for n in range(1, len(deltas)):
+                s = sum(abs(sum(np.array(deltas)[-n:,])))
                 if s == 0:
-                    print()
-                    if i == 1:
-                        print("EQUILIBRIUM")
-                    else:
-                        print("OSCILLATING WITH PERIOD %d" % i)
+                    if self.verbose:                    
+                        print()
+                        if n == 1:
+                            print("EQUILIBRIUM")
+                        else:
+                            print("OSCILLATING WITH PERIOD %d" % n)
                     stop = True
                     break
             if stop:
                 break
+
+            # keep track for next round    
             previous_distribution = current_distribution
             step += 1
+
+        # calculate euclidean distance from the magic distribution
         self.score = self.distance(current_distribution, MAGIC)
+
         if self.verbose:   
             print("(", step + 1, ")")
             print()
             print(("%d\t%d\t%d\t%d" % tuple(current_distribution)))
             print(self.score)
+
 
     def update(self):
         for pair in self.pairs:
