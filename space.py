@@ -2,7 +2,7 @@
 
 import os, time
 import numpy as np
-from util import load, save
+from util import load, save, log
 from model import Model, Pair, RULES, STATES
 
 from ggplot import * # https://stackoverflow.com/questions/50591982/importerror-cannot-import-name-timestamp
@@ -32,7 +32,7 @@ from pandas import DataFrame
 
 baseline, X = load("points.pkl")
 np.append(X, baseline)
-print(X.shape)
+log.info(X.shape)
 
 def classify(x):
     x = list(x)
@@ -45,8 +45,8 @@ def classify(x):
     # else:
     #     return "?"
 
-print(baseline)
-print(classify(baseline))
+log.info(baseline)
+log.info(classify(baseline))
 
 
 types = list(map(classify, X))
@@ -54,16 +54,16 @@ types[-1] = "Homophily"
 
 # categories = list(map(lambda x: int(x), list(set(types))))
 # categories.sort()
-# print(categories)
+# log.info(categories)
 
 # if dimensions were greater than 50, should use PCA to reduce first
 # results = TSNE(n_components=2).fit_transform(X)
 results = PCA(n_components=2).fit_transform(X)
-print(results.shape)
+log.info(results.shape)
 
 
 # clusters = DBSCAN(eps=2, min_samples=2).fit(results)
-# print(clusters.labels_)
+# log.info(clusters.labels_)
 # types = clusters.labels_
 
 

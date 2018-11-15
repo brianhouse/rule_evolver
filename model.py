@@ -1,7 +1,8 @@
 import random, json, math, copy, time
 import numpy as np
-from pprint import pformat
+from pprint import pformat, pprint
 from util import config, log, save
+from collections import deque
 
 PAIRS = 400
 
@@ -12,7 +13,7 @@ RULES = {   '++': {'++': .5, '+-': .2, '-+': .1, '--': .2},    # Merton pages 40
             }
 STATES = tuple(RULES.keys())
 
-MAGIC = [x / 400 for x in [133, 57, 24, 186]]
+MAGIC = 133, 57, 24, 186
 
 
 class Pair:
@@ -32,20 +33,31 @@ class Model:
     def __repr__(self):
         return "%s (%d)" % (self.score, self.id)
 
-    def __init__(self, rules=None):
+    def show(self):
+        # print("ID\t", model.id)
+        print("  \t++\t+-\t-+\t--")
+        print("++\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(self.rules["++"].values()))
+        print("+-\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(self.rules["+-"].values()))
+        print("-+\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(self.rules["-+"].values()))
+        print("--\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(self.rules["--"].values()))
+        if self.score != None:
+            print("\t\t\t\t\t%2.2f, %2.2f, %2.2f, %2.2f (%.4f)" % (*self.distribution(), self.score))
+        print()        
+
+    def __init__(self, rules=None, pairs=PAIRS):
         self.id = Model.n
         Model.n += 1
         self.verbose = False        
-        self.pairs = [Pair() for p in range(PAIRS)]
+        self.pairs = [Pair() for p in range(pairs)]
         self.score = 500
         if rules:
             self.rules = copy.copy(rules)
         else:
-            self.rules = {state: dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0]))) for state in STATES}
+            self.rules = {state: dict(zip(STATES, tuple(np.random.dirichlet(np.ones(4),size=1)[0]))) for state in STATES}
 
     def mutate(self):
         # redo whole rule set
-        # self.rules[random.choice(STATES)] = dict(zip(STATES, list(np.random.dirichlet(np.ones(4),size=1)[0])))
+        # self.rules[random.choice(STATES)] = dict(zip(STATES, tuple(np.random.dirichlet(np.ones(4),size=1)[0])))
 
         # swap individual rules
         rule = random.choice(STATES)
@@ -58,14 +70,6 @@ class Model:
     def breed(self, model):
         return Model({key: (copy.copy(self.rules[key]) if random.random() > .5 else copy.copy(model.rules[key])) for key in STATES})
 
-    def distribution(self):
-        stats = {'++': 0, '+-': 0, '-+': 0, '--': 0}
-        for pair in self.pairs:
-            stats[pair.state] += 1
-        return [x / PAIRS for x in tuple(stats.values())]
-
-    def distance(self, d1, d2):
-        return np.linalg.norm(np.array(d1) - np.array(d2))        
 
     def reset(self):
         for pair in self.pairs:
@@ -80,29 +84,52 @@ class Model:
             for pair in chunk:
                 pair.state = STATES[c]        
 
+    def distance(self, d1, d2):
+        return float(np.linalg.norm(np.array(d1) - np.array(d2)))
+
+    def distribution(self):
+        dist = {'++': 0, '+-': 0, '-+': 0, '--': 0}
+        for pair in self.pairs:
+            dist[pair.state] += 1
+        return tuple(dist.values())
+
     def run(self):
         self.reset()
-        T = 0
-        previous = (0, 0, 0, 0)
-        previous_dis = float('Inf')
+        step = 0
+        previous_distribution = (0, 0, 0, 0)
+        deltas = []
         if self.verbose:
-            log.info("--------------------------------------------------")        
-            log.info("\n" + pformat(self.rules))
+            print("--------------------------------------------------")        
+            pprint(self.rules)
+            print()
         while True:
-            current = self.distribution()
-            dis = self.distance(current, previous)
-            if dis >= previous_dis:
-                break
-            previous = current
-            previous_dis = dis
-            T += 1
             self.update()            
-        self.score = self.distance(previous, MAGIC)
-        if self.verbose:                
-            log.info(dis)
-            log.info("T%s" % (T-1))
-            log.info(previous)
-            log.info(self.score)
+            current_distribution = self.distribution()
+            delta = np.array(current_distribution) - np.array(previous_distribution)
+            if self.verbose:
+                print("%d\t%d\t%d\t%d\t%s" % (*current_distribution, delta))
+            deltas.append(delta)
+            stop = False
+            for i in range(1, len(deltas)):
+                s = sum(abs(sum(np.array(deltas)[-i:,])))
+                if s == 0:
+                    print()
+                    if i == 1:
+                        print("EQUILIBRIUM")
+                    else:
+                        print("OSCILLATING WITH PERIOD %d" % i)
+                    stop = True
+                    break
+            if stop:
+                break
+            previous_distribution = current_distribution
+            step += 1
+        self.score = self.distance(current_distribution, MAGIC)
+        if self.verbose:   
+            print("(", step + 1, ")")
+            print()
+            print(("%d\t%d\t%d\t%d" % tuple(current_distribution)))
+            print(self.score)
 
     def update(self):
         for pair in self.pairs:

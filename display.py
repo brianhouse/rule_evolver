@@ -6,17 +6,6 @@ from model import Model, Pair, RULES, STATES
 
 DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), "results"))
 
-def output(model):
-    # print("ID\t", model.id)
-    print("  \t++\t+-\t-+\t--")
-    print("++\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(model.rules["++"].values()))
-    print("+-\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(model.rules["+-"].values()))
-    print("-+\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(model.rules["-+"].values()))
-    print("--\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(model.rules["--"].values()))
-    print("\t\t\t\t\t%2.2f, %2.2f, %2.2f, %2.2f (%.4f)" % (*model.distribution(), model.score))
-    print()
-
-
 print()
 print("EVOLVED TRANSITION RULES")
 print()
@@ -27,7 +16,7 @@ print("Merton's table")
 
 baseline = Model(RULES)
 baseline.run()
-output(baseline)
+baseline.show()
 
 print()
 print()
@@ -42,7 +31,7 @@ for filename in os.listdir(DIRECTORY):
     model = load(path)
     model.run()
     if model.score <= 0.004:
-        output(model)
+        model.show()
         models.append(model)
 
 save("models.pkl", (baseline, models))
