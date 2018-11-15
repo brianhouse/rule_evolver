@@ -2,7 +2,7 @@
 
 import os, time
 from util import load, save
-from model import Model, Pair, RULES, STATES
+from model import Model, RULES, STATES
 
 DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), "results"))
 
@@ -42,9 +42,9 @@ LONG = {'++': {'++': 0.026286865182543605,
         '--': 0.31260434089375366}}        
 
 
-# model = Model(RULES)
-# model = Model(OSC, 400)
-model = Model()
+model = Model(RULES)
+# model = Model(LONG)
+# model = Model()
 model.verbose = True
 model.run()
 # baseline.show()

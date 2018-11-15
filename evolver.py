@@ -7,13 +7,13 @@ from util import config, log, save
 from model import Model
 
 
-POPULATION = 1000
+POPULATION = 100
 SURVIVAL = .5
 TOURNAMENT = .1
 MUTATION = .2
 MATE = .2
 
-THRESHOLD = .01
+THRESHOLD = 5
 
 
 while True:
@@ -33,7 +33,7 @@ while True:
             best = models[0]            
             log.info("==> new best: %s" % best.id)
 
-        if generation >= 12 and best.score < THRESHOLD:
+        if best.score < THRESHOLD or generation == 50:
             break
 
         s = math.floor(POPULATION * SURVIVAL)   
@@ -58,13 +58,12 @@ while True:
             models[m].mutate()
         # log.info("mutated") 
 
-       generation += 1
+        generation += 1
 
+    if best.score < THRESHOLD:
+        best.verbose = True
+        best.run()
+        best.verbose = False
 
-
-    best.verbose = True
-    best.run()
-    best.verbose = False
-
-    save("results/%s.pkl" % int(time.time()), best)    
+        save("results/%s.pkl" % int(time.time()), best)    
 

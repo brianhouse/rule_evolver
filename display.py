@@ -2,14 +2,14 @@
 
 import os, time
 from util import load, save
-from model import Model, Pair, RULES, STATES
+from model import Model, RULES, STATES, MAGIC
 
 DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), "results"))
 
 print()
 print("EVOLVED TRANSITION RULES")
 print()
-print("Target distribution\t\t\t%2.2f, %2.2f, %2.2f, %2.2f (0.00)" % tuple([x/400 for x in (133, 57, 24, 186)]))
+print("Target distribution\t\t\t%d, %d, %d, %d (0.00)" % MAGIC)
 print()
 print()
 print("Merton's table")
@@ -30,8 +30,9 @@ for filename in os.listdir(DIRECTORY):
     path = os.path.join(DIRECTORY, filename)
     model = load(path)
     model.run()
-    if model.score <= 0.004:
-        model.show()
-        models.append(model)
+    model.show()
+    models.append(model)
 
 save("models.pkl", (baseline, models))
+
+print("COLLATED %d MODELS" % len(models))

@@ -2,9 +2,7 @@ import random, json, math, copy, time
 import numpy as np
 from pprint import pformat, pprint
 from util import config, log, save
-from collections import deque
 
-PAIRS = 400
 
 RULES = {   '++': {'++': .5, '+-': .2, '-+': .1, '--': .2},    # Merton pages 40 and 55
             '+-': {'++': .3, '+-': .2, '-+': .0, '--': .5},
@@ -14,16 +12,6 @@ RULES = {   '++': {'++': .5, '+-': .2, '-+': .1, '--': .2},    # Merton pages 40
 STATES = tuple(RULES.keys())
 
 MAGIC = 133, 57, 24, 186
-
-
-class Pair:
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.state = None
-        self.changed = False
 
 
 class Model:
@@ -41,15 +29,13 @@ class Model:
         print("-+\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(self.rules["-+"].values()))
         print("--\t%2.2f\t%2.2f\t%2.2f\t%2.2f" % tuple(self.rules["--"].values()))
         if self.score != None:
-            print("\t\t\t\t\t%2.2f, %2.2f, %2.2f, %2.2f (%.4f)" % (*self.distribution(), self.score))
+            print("\t\t\t\t\t%d, %d, %d, %d (%.4f)" % (*self.counts, self.score))
         print()        
 
-    def __init__(self, rules=None, pairs=PAIRS):
+    def __init__(self, rules=None):
         self.id = Model.n
         Model.n += 1
         self.verbose = False        
-        self.pairs = [Pair() for p in range(pairs)]
-        self.score = 500
         if rules:
             self.rules = copy.copy(rules)
         else:
@@ -70,94 +56,47 @@ class Model:
     def breed(self, model):
         return Model({key: (copy.copy(self.rules[key]) if random.random() > .5 else copy.copy(model.rules[key])) for key in STATES})
 
-
     def reset(self):
-        for pair in self.pairs:
-            pair.reset()
-        self.score = None
-        n = int(len(self.pairs) / len(STATES))
-        chunks = [self.pairs[i:i + n] for i in range(0, len(self.pairs), n)]
-        if len(chunks) > len(STATES):
-            chunks[-2] = chunks[-2] + chunks[-1]
-            del chunks[-1]
-        for c, chunk in enumerate(chunks):
-            for pair in chunk:
-                pair.state = STATES[c]        
+        self.score = float('Inf')
+        self.distribution = {state: 0.25 for state in STATES}
 
     def distance(self, d1, d2):
         return float(np.linalg.norm(np.array(d1) - np.array(d2)))
 
-    def distribution(self):
-        dist = {'++': 0, '+-': 0, '-+': 0, '--': 0}
-        for pair in self.pairs:
-            dist[pair.state] += 1
-        return tuple(dist.values())
+    def update(self):
+        new_distribution = {state: 0.0 for state in STATES}
+        for state_1 in STATES:
+            for state_2 in STATES:
+                new_distribution[state_2] += self.distribution[state_1] * self.rules[state_1][state_2]
+        self.distribution = new_distribution        
 
     def run(self):
         self.reset()
         step = 0
-        previous_distribution = (0, 0, 0, 0)
+        previous_distribution = self.distribution
         deltas = []
         if self.verbose:
             print("--------------------------------------------------")        
             pprint(self.rules)
             print()
         while True:
-
-            # update the model and get the number of pairs in each state
             self.update()            
-            current_distribution = self.distribution()
-
-            # find the change in the number of pairs for each state
-            delta = np.array(current_distribution) - np.array(previous_distribution)
-            if self.verbose:
-                print("%d\t%d\t%d\t%d\t%s" % (*current_distribution, delta))
-            deltas.append(delta)
-
-            # if the changes sum over n steps, we're oscillating and should stop
-            stop = False
-            for n in range(1, len(deltas)):
-                s = sum(abs(sum(np.array(deltas)[-n:,])))
-                if s == 0:
-                    if self.verbose:                    
-                        print()
-                        if n == 1:
-                            print("EQUILIBRIUM")
-                        else:
-                            print("OSCILLATING WITH PERIOD %d" % n)
-                    stop = True
-                    break
-            if stop:
+            delta = np.array(list(self.distribution.values())) - np.array(list(previous_distribution.values()))
+            if sum(abs(delta)) < 0.000001:
                 break
-
-            # keep track for next round    
-            previous_distribution = current_distribution
+            previous_distribution = self.distribution
             step += 1
 
         # calculate euclidean distance from the magic distribution
-        self.score = self.distance(current_distribution, MAGIC)
+        self.counts = tuple(np.array(list(self.distribution.values())) * 400)
+        self.score = self.distance(self.counts, MAGIC)
 
         if self.verbose:   
             print("(", step + 1, ")")
             print()
-            print(("%d\t%d\t%d\t%d" % tuple(current_distribution)))
+            print("%d\t%d\t%d\t%d" % self.counts)
             print(self.score)
 
 
-    def update(self):
-        for pair in self.pairs:
-            pair.changed = False
-        for state_1, rules in self.rules.items():
-            population = sum([1 for pair in self.pairs if pair.state == state_1 and not pair.changed])
-            rules = {state: int(round(percent * population)) for (state, percent) in rules.items()}
-            for state_2, num in rules.items():
-                p = 0
-                for n in range(num):
-                    while p < len(self.pairs) and (self.pairs[p].changed or self.pairs[p].state != state_1):
-                        p += 1
-                    if p == len(self.pairs):
-                        break
-                    self.pairs[p].state = state_2
-                    self.pairs[p].changed = True
 
 
