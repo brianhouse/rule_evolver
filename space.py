@@ -36,6 +36,7 @@ print(X.shape)
 
 def classify(x):
     x = list(x)
+    return "Others"
     return "%d" % x.index(max(x))
     # if x[0] >= .5:
     #     return "++"
@@ -49,11 +50,11 @@ print(classify(baseline))
 
 
 types = list(map(classify, X))
-types[-1] = "20"
+types[-1] = "Homophily"
 
-categories = list(map(lambda x: int(x), list(set(types))))
-categories.sort()
-print(categories)
+# categories = list(map(lambda x: int(x), list(set(types))))
+# categories.sort()
+# print(categories)
 
 # if dimensions were greater than 50, should use PCA to reduce first
 # results = TSNE(n_components=2).fit_transform(X)

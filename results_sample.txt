@@ -14,6 +14,8 @@ Merton's table
 0.3325	0.1425	0.06	0.465	# target /400
 0.33	0.145	0.055,	0.47    # merton's table
 
+merton's table doesnt reach the described equilibrium, so it's reasonable to be within that error amount
+
 
 Alternative tables
 

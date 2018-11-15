@@ -24,7 +24,6 @@ while True:
     generation = 0
     while True:   
         log.info("GENERATION %d" % generation) 
-        generation += 1
         for model in models:
             model.run()
         models.sort(key=lambda m: (m.score, m.id))
@@ -57,7 +56,10 @@ while True:
             if models[m] == best:
                 continue
             models[m].mutate()
-        # log.info("mutated")            
+        # log.info("mutated") 
+
+       generation += 1
+
 
 
     best.verbose = True
