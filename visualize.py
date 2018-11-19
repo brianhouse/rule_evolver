@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, time
+import os, time, sys
 import numpy as np
 from util import load, save, log
 from model import Model, RULES, STATES
@@ -12,24 +12,11 @@ from sklearn.cluster import DBSCAN
 from pandas import DataFrame
 
 
-# load models
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), "models.pkl"))
-baseline, models = load(path)
+if len(sys.argv) < 2:
+    exit("[path]")
+path = sys.argv[1]
 
-
-def linearize(model):
-    point = []
-    for state_1 in STATES:
-        for state_2 in STATES:
-            point.append(model.rules[state_1][state_2])
-    return point
-
-baseline = linearize(baseline)
-points = np.array(list(map(linearize, models)))
-
-save("points.pkl", (baseline, points))
-
-baseline, X = load("points.pkl")
+baseline, X = load(path)
 np.append(X, baseline)
 log.info(X.shape)
 
