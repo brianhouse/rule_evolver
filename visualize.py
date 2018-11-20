@@ -3,6 +3,7 @@
 import os, time, sys
 import numpy as np
 from util import load, save, log
+from collections import OrderedDict
 from model import Model, RULES, STATES
 
 from ggplot import * # https://stackoverflow.com/questions/50591982/importerror-cannot-import-name-timestamp
@@ -55,9 +56,11 @@ log.info(results.shape)
 # types = clusters.labels_
 
 
-results = {'x': results[:, 0], 'y': results[:, 1], 'Type': types}
+results = DataFrame(OrderedDict({'x': results[:, 0], 'y': results[:, 1], 'label': range(len(results)), 'Type': types}))
+print(results)
 
-chart = ggplot(DataFrame(results), aes(x='x', y='y', color='Type')) + geom_point(size=50, alpha=1) + ggtitle("Generated models")
+chart = ggplot(results, aes(x='x', y='y', color='Type')) + geom_point(size=50, alpha=1) + ggtitle("Generated models") + geom_text(aes(label='label'), hjust=0.0125, vjust=0.0125, size=8)
 chart.show()
 
 
+# https://stackoverflow.com/questions/15624656/label-points-in-geom-point

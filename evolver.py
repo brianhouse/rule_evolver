@@ -18,7 +18,7 @@ THRESHOLD = 5
 
 while True:
     log.info("//////////////////////////////////////////////////")    
-    models = [Model() for i in range(POPULATION)]
+    models = [Model(constrained=True) for i in range(POPULATION)]
     best = None
     best_score = 500
     generation = 0

@@ -26,7 +26,7 @@ print()
 
 models = []
 for filename in os.listdir(DIRECTORY):
-    if filename[-4:] != ".pkl":
+    if filename[-4:] != ".pkl" or "models" in filename or "points" in filename:
         continue
     path = os.path.join(DIRECTORY, filename)
     model = load(path)

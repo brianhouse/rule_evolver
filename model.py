@@ -32,14 +32,27 @@ class Model:
             print("\t\t\t\t\t%d, %d, %d, %d (%.4f)" % (*self.counts, self.score))
         print()        
 
-    def __init__(self, rules=None):
+    def __init__(self, rules=None, constrained=False):
         self.id = Model.n
         Model.n += 1
-        self.verbose = False        
+        self.verbose = False    
+        self.score = None    
         if rules:
             self.rules = copy.copy(rules)
-        else:
+        elif constrained == False:
             self.rules = {state: dict(zip(STATES, tuple(np.random.dirichlet(np.ones(4),size=1)[0]))) for state in STATES}
+        else:
+            self.rules = {'++': {}, '+-': {}, '-+': {}, '--': {}}
+            self.rules['++'] = dict(zip(STATES, tuple(np.random.dirichlet(np.ones(4),size=1)[0])))
+            l = list(np.random.dirichlet(np.ones(3),size=1)[0])
+            l.insert(2, 0)
+            self.rules['+-'] = dict(zip(STATES, l))
+            l = list(np.random.dirichlet(np.ones(3),size=1)[0])
+            l.insert(1, 0)
+            self.rules['-+'] = dict(zip(STATES, l))
+            l = list(np.random.dirichlet(np.ones(3),size=1)[0])
+            l.insert(2, 0)
+            self.rules['--'] = dict(zip(STATES, l))
 
     def mutate(self):
         # redo whole rule set
